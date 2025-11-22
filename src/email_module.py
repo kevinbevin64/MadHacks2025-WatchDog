@@ -1,4 +1,4 @@
-import smtplib
+ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -26,4 +26,15 @@ def send_email(sender_email_address, target_email_address, gmail_app_password, s
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(sender_email_address, gmail_app_password)
         server.sendmail(sender_email_address, target_email_address, msg.as_string())
+    
     print(f"Sent email to: {target_email_address}")
+    
+if __name__ == "__main__":
+    send_email(
+        sender_email_address="kevinbchen88@gmail.com",
+        target_email_address="kbchen3@wisc.edu",
+        gmail_app_password="dops mptt oqbr mjhy",
+        subject="Something",
+        body="Something else",
+        image_path="image.png"
+    )

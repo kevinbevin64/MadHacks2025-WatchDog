@@ -13,7 +13,7 @@ backSub = cv2.createBackgroundSubtractorMOG2(
 suspicion = 0.0  # runs between 0 and 1
 
 
-def is_messing_with_stuff(frame_float_0_to_1, roi_mask=None):
+def should_notify(frame_float_0_to_1, roi_mask=None):
     global backSub, suspicion
 
     # 1. Convert normalized float frame [0,1] -> uint8 [0,255]
