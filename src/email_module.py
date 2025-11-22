@@ -25,7 +25,6 @@ def send_email(sender_email_address, target_email_address, gmail_app_password, s
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(sender_email_address, gmail_app_password)
-        server.sendmail(sender_email_address, target_email_address, msg.as_string())
     
     print(f"Sent email to: {target_email_address}")
     
