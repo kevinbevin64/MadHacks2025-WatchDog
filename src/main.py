@@ -17,9 +17,8 @@ def main():
         if read_successfully:
             greyscale_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             frames.append(greyscale_frame)
-            
-            # Keep only the most recent NUM_FRAMES_ANALYZED frames
-            # Remove extras 
+
+            # Remove extra frames
             if len(frames) > NUM_FRAMES_ANALYZED:
                 frames.pop(0)
         
