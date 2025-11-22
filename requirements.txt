@@ -1,0 +1,6 @@
+opencv-python
+numpy
+wakepy
+flask
+flask-cors
+

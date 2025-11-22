@@ -1,0 +1,17 @@
+{
+  "name": "watchdog-electron",
+  "version": "1.0.0",
+  "description": "WatchDog Motion Detection Electron App",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}
+
