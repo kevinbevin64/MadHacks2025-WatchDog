@@ -82,30 +82,30 @@ body {
 }
 
 .start-button {
-    width: min(90%, 500px);
-    min-width: 250px;
-    height: clamp(60px, 8vh, 100px);
+    width: min(90%, 425px);
+    min-width: 213px;
+    height: clamp(51px, 6.8vh, 85px);
     background: #22c55e;
     color: white;
     border: none;
     border-radius: 12px;
-    font-size: clamp(18px, 2.5vh, 28px);
+    font-size: clamp(15px, 2.1vh, 24px);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4);
+    box-shadow: none;
     flex-shrink: 0;
 }
 
 .start-button:hover {
     background: #16a34a;
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+    box-shadow: none;
 }
 
 .start-button:active {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+    box-shadow: none;
 }
 
 .start-button:disabled {
@@ -118,15 +118,15 @@ body {
 .start-button.detecting {
     background: #ef4444;
     content: "Stop Motion Detection";
-    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+    box-shadow: none;
 }
 
 .start-button.detecting:hover {
     background: #dc2626;
-    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
+    box-shadow: none;
 }
 
 .start-button.detecting:active {
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    box-shadow: none;
 }
 
