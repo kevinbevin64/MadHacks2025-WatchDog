@@ -7,9 +7,10 @@ from constants import NUM_FRAMES_ANALYZED, FPS
 from analysis import should_notify
 from push_notifications import send_motion_alert
 
-COOLDOWN_SECONDS = 15
+COOLDOWN_SECONDS = 1
 
 def backend_loop():
+    print("dddddkdjfkdjfkdsjfkjsdf")
     with keep.presenting():
         time_step = 1.0 / FPS
         frames = []
@@ -32,6 +33,7 @@ def backend_loop():
             time.sleep(time_step)
 
             if len(frames) >= NUM_FRAMES_ANALYZED:
+                print("doing this")
                 # Get the most recent frame and normalize to 0-1 range
                 latest_frame = frames[-1]
                 frame_normalized = latest_frame.astype("float32") / 255.0
@@ -40,6 +42,10 @@ def backend_loop():
                 now = time.time()
                 cooldown_passed = (now - last_alert_time) >= COOLDOWN_SECONDS
 
+                # Debug output
+                if alarm:
+                    print(f"Alarm triggered! Suspicion: {suspicion:.2f}, Motion: {motion_fraction:.2%}, Cooldown passed: {cooldown_passed}")
+                
                 if alarm and cooldown_passed:
                     last_alert_time = now  # update timer
                     email_attempt_counter += 1
@@ -47,6 +53,9 @@ def backend_loop():
                     
                     # Send push notification
                     send_motion_alert()
+                elif alarm and not cooldown_passed:
+                    time_remaining = COOLDOWN_SECONDS - (now - last_alert_time)
+                    print(f"Alarm triggered but cooldown active. {time_remaining:.1f}s remaining.")
                     
 
 if __name__ == "__main__":

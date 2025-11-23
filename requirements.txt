@@ -3,5 +3,7 @@ numpy
 wakepy
 flask
 flask-cors
-apns2
+PyJWT[crypto]
+requests
+cryptography
 
