@@ -4,4 +4,5 @@ wakepy
 flask
 flask-cors
 apns2
+requests
 

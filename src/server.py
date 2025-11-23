@@ -4,9 +4,12 @@ import cv2
 import time
 import threading
 import numpy as np
+import os
+import json
 from wakepy import keep
 from constants import NUM_FRAMES_ANALYZED, FPS
 from analysis import should_notify
+from send_to_rust_server import upload_video, upload_json
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Electron app
@@ -22,13 +25,32 @@ current_suspicion = 0.0
 keep_awake_context = None
 detection_thread = None
 last_alert_time = 0
-COOLDOWN_SECONDS = 15  # 2 minutes cooldown between email alerts
+COOLDOWN_SECONDS = 15  # 15 seconds cooldown between email alerts
+
+# Recording constants
+ROLLING_SECONDS = 5  # Keep 5 seconds of buffer before motion
+POST_MOTION_SECONDS = 15  # Continue recording 15 seconds after motion stops
+ROLLING_BUFFER_SIZE = int(ROLLING_SECONDS * FPS)
+OUTPUT_DIR = "recordings"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # init_video_capture is now handled in detection_loop
 
 # Shared frame buffer for streaming
 latest_frame_buffer = None
 frame_buffer_lock = threading.Lock()
+
+def create_video_writer(filename, frame_width, frame_height):
+    """Create a VideoWriter for saving recordings"""
+    # Use MJPG codec for maximum compatibility and reliability
+    fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+    writer = cv2.VideoWriter(
+        filename, fourcc, FPS, (frame_width, frame_height)
+    )
+    if not writer.isOpened():
+        print(f"Warning: Failed to open video writer for {filename}")
+        return None
+    return writer
 
 def generate_frames():
     """Generate video frames for streaming"""
@@ -75,6 +97,16 @@ def detection_loop():
     
     time_step = 1.0 / FPS
     
+    # Recording state
+    recording = False
+    recording_writer = None
+    recording_filename = None
+    motion_last_seen = 0
+    rolling_buffer = []
+    frame_width = 640
+    frame_height = 480
+    was_detecting = False  # Track previous detection state
+    
     # Initialize single video capture - try multiple camera indices
     if video_capture is None:
         for camera_index in range(3):  # Try cameras 0, 1, 2
@@ -82,6 +114,8 @@ def detection_loop():
             if video_capture.isOpened():
                 video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                 video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+                frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 print(f"Video capture initialized on camera index {camera_index}")
                 break
             else:
@@ -103,6 +137,97 @@ def detection_loop():
                 with frame_buffer_lock:
                     latest_frame_buffer = frame.copy()
                 
+                # Maintain rolling buffer for recording (5 seconds)
+                if is_detecting:
+                    rolling_buffer.append(frame.copy())
+                    if len(rolling_buffer) > ROLLING_BUFFER_SIZE:
+                        rolling_buffer.pop(0)
+                
+                # Write frame to recording if active
+                if recording and recording_writer is not None:
+                    try:
+                        recording_writer.write(frame)
+                    except Exception as e:
+                        print(f"--- Error writing frame to video: {e}")
+                        recording = False
+                        if recording_writer is not None:
+                            try:
+                                recording_writer.release()
+                            except:
+                                pass
+                        recording_writer = None
+                
+                # Check if detection was just stopped - stop recording immediately
+                if was_detecting and not is_detecting and recording:
+                    print("--- Detection stopped, stopping recording immediately.")
+                    recording = False
+                    
+                    # Properly close the video writer
+                    if recording_writer is not None:
+                        try:
+                            recording_writer.release()
+                            recording_writer = None
+                            time.sleep(0.5)
+                        except Exception as e:
+                            print(f"--- Error releasing video writer: {e}")
+                    
+                    # Store filename for upload (after writer is fully closed)
+                    video_to_upload = recording_filename
+                    recording_filename = None
+                    
+                    # Upload video and timestamp to Rust server (in background thread)
+                    if video_to_upload and os.path.exists(video_to_upload):
+                        def upload_after_delay():
+                            time.sleep(1.0)
+                            try:
+                                print(f"--- Uploading video to Rust server: {video_to_upload}")
+                                success = upload_video(video_to_upload)
+                                if success:
+                                    print("✓ Video uploaded successfully!")
+                                else:
+                                    print("✗ Video upload failed!")
+                            except Exception as upload_error:
+                                print(f"--- Error uploading video: {upload_error}")
+                        
+                        upload_thread = threading.Thread(target=upload_after_delay, daemon=True)
+                        upload_thread.start()
+                        
+                        try:
+                            # Create and upload timestamp JSON
+                            now = time.time()
+                            timestamp_data = {
+                                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                                "unix_timestamp": now,
+                                "video_filename": os.path.basename(video_to_upload),
+                                "alarm": current_alarm,
+                                "suspicion": current_suspicion,
+                                "email_attempts": email_attempt_counter
+                            }
+                            
+                            # Save JSON to temp file and upload
+                            json_filename = video_to_upload.replace('.avi', '.json')
+                            with open(json_filename, 'w') as json_file:
+                                json.dump(timestamp_data, json_file, indent=2)
+                            
+                            print(f"--- Uploading timestamp JSON: {json_filename}")
+                            success = upload_json(json_filename)
+                            if success:
+                                print("✓ JSON uploaded successfully!")
+                            else:
+                                print("✗ JSON upload failed!")
+                            
+                            # Clean up temp JSON file
+                            try:
+                                os.remove(json_filename)
+                            except:
+                                pass
+                                
+                        except Exception as upload_error:
+                            print(f"--- Error uploading to Rust server: {upload_error}")
+                
+                # Update was_detecting for next iteration
+                was_detecting = is_detecting
+                
                 # Only do detection if enabled
                 if is_detecting:
                     greyscale_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -122,14 +247,113 @@ def detection_loop():
                             current_suspicion = suspicion
                             current_alarm = alarm
                             
+                            now = time.time()
+                            
                             if alarm:
-                                now = time.time()
+                                # Update last motion time to keep recording alive
+                                motion_last_seen = now
+                                
+                                # Start recording if not already running
+                                if not recording:
+                                    timestamp = time.strftime("%Y%m%d_%H%M%S")
+                                    recording_filename = os.path.join(OUTPUT_DIR, f"motion_{timestamp}.avi")
+                                    print(f"--- Recording started: {recording_filename}")
+                                    
+                                    recording_writer = create_video_writer(
+                                        recording_filename, frame_width, frame_height
+                                    )
+                                    
+                                    if recording_writer is None:
+                                        print(f"--- Failed to create video writer, skipping recording")
+                                        continue
+                                    
+                                    recording = True
+                                    
+                                    # Write old 5-second buffer first
+                                    for buffered_frame in rolling_buffer:
+                                        if recording_writer is not None:
+                                            recording_writer.write(buffered_frame)
+                                
+                                # Email cooldown check
                                 cooldown_passed = (now - last_alert_time) >= COOLDOWN_SECONDS
                                 
                                 if cooldown_passed:
                                     last_alert_time = now
                                     email_attempt_counter += 1
                                     print(f"Attempting to email! (Attempt #{email_attempt_counter})")
+                            
+                            # Stop recording after no motion for POST_MOTION_SECONDS
+                            if recording:
+                                if (now - motion_last_seen) >= POST_MOTION_SECONDS:
+                                    print("--- Recording stopped.")
+                                    recording = False
+                                    
+                                    # Properly close the video writer
+                                    if recording_writer is not None:
+                                        try:
+                                            recording_writer.release()
+                                            recording_writer = None
+                                            # Wait longer to ensure file is fully written and flushed to disk
+                                            time.sleep(0.5)
+                                        except Exception as e:
+                                            print(f"--- Error releasing video writer: {e}")
+                                    
+                                    # Store filename for upload (after writer is fully closed)
+                                    video_to_upload = recording_filename
+                                    recording_filename = None
+                                    
+                                    # Upload video and timestamp to Rust server (in background thread to avoid blocking)
+                                    if video_to_upload and os.path.exists(video_to_upload):
+                                        def upload_after_delay():
+                                            # Additional delay to ensure file system has released the file
+                                            time.sleep(1.0)
+                                            try:
+                                                print(f"--- Uploading video to Rust server: {video_to_upload}")
+                                                success = upload_video(video_to_upload)
+                                                if success:
+                                                    print("✓ Video uploaded successfully!")
+                                                else:
+                                                    print("✗ Video upload failed!")
+                                            except Exception as upload_error:
+                                                print(f"--- Error uploading video: {upload_error}")
+                                        
+                                        # Start upload in background thread
+                                        upload_thread = threading.Thread(target=upload_after_delay, daemon=True)
+                                        upload_thread.start()
+                                        
+                                        try:
+                                            
+                                            # Create and upload timestamp JSON
+                                            timestamp_data = {
+                                                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                                                "unix_timestamp": now,
+                                                "video_filename": os.path.basename(video_to_upload),
+                                                "alarm": current_alarm,
+                                                "suspicion": current_suspicion,
+                                                "email_attempts": email_attempt_counter
+                                            }
+                                            
+                                            # Save JSON to temp file and upload
+                                            json_filename = video_to_upload.replace('.avi', '.json')
+                                            with open(json_filename, 'w') as json_file:
+                                                json.dump(timestamp_data, json_file, indent=2)
+                                            
+                                            print(f"--- Uploading timestamp JSON: {json_filename}")
+                                            success = upload_json(json_filename)
+                                            if success:
+                                                print("✓ JSON uploaded successfully!")
+                                            else:
+                                                print("✗ JSON upload failed!")
+                                            
+                                            # Clean up temp JSON file
+                                            try:
+                                                os.remove(json_filename)
+                                            except:
+                                                pass
+                                                
+                                        except Exception as upload_error:
+                                            print(f"--- Error uploading to Rust server: {upload_error}")
+                                    
                         except Exception as e:
                             print(f"Error in motion detection: {e}")
             
