@@ -10,6 +10,7 @@ from wakepy import keep
 from constants import NUM_FRAMES_ANALYZED, FPS
 from analysis import should_notify
 from send_to_rust_server import upload_video, upload_json
+from push_notifications import send_motion_alert
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Electron app
@@ -25,7 +26,7 @@ current_suspicion = 0.0
 keep_awake_context = None
 detection_thread = None
 last_alert_time = 0
-COOLDOWN_SECONDS = 15  # 15 seconds cooldown between email alerts
+COOLDOWN_SECONDS = 15  # Cooldown between alerts (in seconds)
 
 # Recording constants
 ROLLING_SECONDS = 5  # Keep 5 seconds of buffer before motion
@@ -280,7 +281,10 @@ def detection_loop():
                                 if cooldown_passed:
                                     last_alert_time = now
                                     email_attempt_counter += 1
-                                    print(f"Attempting to email! (Attempt #{email_attempt_counter})")
+                                    print(f"ALERT: Motion detected! Sending push notification (Attempt #{email_attempt_counter})")
+                                    
+                                    # Send push notification
+                                    send_motion_alert()
                             
                             # Stop recording after no motion for POST_MOTION_SECONDS
                             if recording:
@@ -353,7 +357,6 @@ def detection_loop():
                                                 
                                         except Exception as upload_error:
                                             print(f"--- Error uploading to Rust server: {upload_error}")
-                                    
                         except Exception as e:
                             print(f"Error in motion detection: {e}")
             

@@ -8,6 +8,7 @@ from constants import NUM_FRAMES_ANALYZED, FPS
 from analysis import should_notify
 from push_notifications import send_motion_alert
 
+<<<<<<< HEAD
 COOLDOWN_SECONDS = 15
 ROLLING_SECONDS = 5
 POST_MOTION_SECONDS = 15
@@ -21,8 +22,12 @@ def create_video_writer(filename, frame_width, frame_height):
     return cv2.VideoWriter(
         filename, fourcc, FPS, (frame_width, frame_height)
     )
+=======
+COOLDOWN_SECONDS = 1
+>>>>>>> 6c497b347061723664b5130c41a0b8af82450b8c
 
 def backend_loop():
+    print("dddddkdjfkdjfkdsjfkjsdf")
     with keep.presenting():
         time_step = 1.0 / FPS
         frames = []
@@ -66,6 +71,7 @@ def backend_loop():
 
             # --- Motion Analysis ---
             if len(frames) >= NUM_FRAMES_ANALYZED:
+<<<<<<< HEAD
 
                 normalized = frames[-1].astype("float32") / 255.0
                 alarm, motion_fraction, fg_mask, suspicion = should_notify(normalized)
@@ -112,6 +118,32 @@ def backend_loop():
                         recording = False
                         recording_writer.release()
                         recording_writer = None
+=======
+                print("doing this")
+                # Get the most recent frame and normalize to 0-1 range
+                latest_frame = frames[-1]
+                frame_normalized = latest_frame.astype("float32") / 255.0
+                
+                alarm, motion_fraction, fg_mask, suspicion = should_notify(frame_normalized)
+                now = time.time()
+                cooldown_passed = (now - last_alert_time) >= COOLDOWN_SECONDS
+
+                # Debug output
+                if alarm:
+                    print(f"Alarm triggered! Suspicion: {suspicion:.2f}, Motion: {motion_fraction:.2%}, Cooldown passed: {cooldown_passed}")
+                
+                if alarm and cooldown_passed:
+                    last_alert_time = now  # update timer
+                    email_attempt_counter += 1
+                    print("ALERT: sending push notification!")
+                    
+                    # Send push notification
+                    send_motion_alert()
+                elif alarm and not cooldown_passed:
+                    time_remaining = COOLDOWN_SECONDS - (now - last_alert_time)
+                    print(f"Alarm triggered but cooldown active. {time_remaining:.1f}s remaining.")
+                    
+>>>>>>> 6c497b347061723664b5130c41a0b8af82450b8c
 
 if __name__ == "__main__":
     backend_loop()

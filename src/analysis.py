@@ -6,7 +6,7 @@ import numpy as np
 # ------------------------------
 backSub = cv2.createBackgroundSubtractorMOG2(
     history=300,        # how many frames to build background
-    varThreshold=25,    # sensitivity to changes
+    varThreshold=16,    # sensitivity to changes (lower = more sensitive)
     detectShadows=False # keep it simple
 )
 
@@ -30,9 +30,9 @@ def should_notify(frame_float_0_to_1, roi_mask=None):
     motion_fraction = np.mean(fg_mask > 0)
 
     # 5. Update suspicion score with simple temporal smoothing
-    MOTION_THRESHOLD = 0.02   # 2% of pixels moving = "something's happening"
-    INCREASE_RATE    = 0.10   # how fast suspicion rises when there's motion
-    DECREASE_RATE    = 0.05   # how fast suspicion falls when it's calm
+    MOTION_THRESHOLD = 0.015   # 1.5% of pixels moving = "something's happening" (lower = more sensitive)
+    INCREASE_RATE    = 0.12   # how fast suspicion rises when there's motion (higher = faster)
+    DECREASE_RATE    = 0.04   # how fast suspicion falls when it's calm (lower = slower to calm)
 
     if motion_fraction > MOTION_THRESHOLD:
         suspicion = min(1.0, suspicion + INCREASE_RATE)
@@ -40,7 +40,7 @@ def should_notify(frame_float_0_to_1, roi_mask=None):
         suspicion = max(0.0, suspicion - DECREASE_RATE)
 
     # 6. Final decision: is someone messing with my stuff?
-    TRIGGER_THRESHOLD = 0.5
+    TRIGGER_THRESHOLD = 0.4  # Lower threshold = easier to trigger alarm
     alarm = suspicion > TRIGGER_THRESHOLD
 
     return alarm, motion_fraction, fg_mask, suspicion
