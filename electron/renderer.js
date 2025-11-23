@@ -123,11 +123,25 @@ async function pollMotionStatus() {
         if (data.alarm) {
             status.textContent = `ALARM: Motion Detected! (${data.email_attempts} attempts)`;
             status.classList.add('alarm');
-            status.classList.remove('detecting');
+            status.classList.remove('detecting', 'warning');
+            status.style.color = ''; // Clear inline style to use CSS class
         } else {
-            status.textContent = `Detecting... Suspicion: ${(data.suspicion * 100).toFixed(1)}%`;
+            const suspicionPercent = data.suspicion * 100;
+            status.textContent = `Detecting... Suspicion: ${suspicionPercent.toFixed(1)}%`;
             status.classList.remove('alarm');
-            status.classList.add('detecting');
+            status.style.color = ''; // Clear inline style to use CSS class
+            
+            // Color based on suspicion level: yellow at 50%, red at 75%
+            if (data.suspicion >= 0.75) {
+                status.classList.add('alarm');
+                status.classList.remove('detecting', 'warning');
+            } else if (data.suspicion >= 0.50) {
+                status.classList.add('warning');
+                status.classList.remove('detecting', 'alarm');
+            } else {
+                status.classList.add('detecting');
+                status.classList.remove('warning', 'alarm');
+            }
         }
     } catch (error) {
         console.error('Error polling motion status:', error);

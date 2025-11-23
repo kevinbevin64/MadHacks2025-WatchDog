@@ -6,6 +6,7 @@ from constants import NUM_FRAMES_ANALYZED, FPS
 # from email_module import send_email
 from analysis import should_notify
 
+COOLDOWN_SECONDS=15
 def backend_loop():
     with keep.presenting():
         time_step = 1.0 / FPS
@@ -33,9 +34,12 @@ def backend_loop():
                 frame_normalized = latest_frame.astype("float32") / 255.0
                 
                 alarm, motion_fraction, fg_mask, suspicion = should_notify(frame_normalized)
-                if alarm:
-                    email_attempt_counter += 1
-                    print(f"Attempting to email! (Attempt #{email_attempt_counter})")
+                now = time.time()
+                cooldown_passed = (now - last_alert_time) >= COOLDOWN_SECONDS
+
+                if alarm and cooldown_passed:
+                    last_alert_time = now  # update timer
+                    print("ALERT: sending email!")
 
 if __name__ == "__main__":
     backend_loop()

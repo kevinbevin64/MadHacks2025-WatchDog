@@ -21,6 +21,8 @@ current_alarm = False
 current_suspicion = 0.0
 keep_awake_context = None
 detection_thread = None
+last_alert_time = 0
+COOLDOWN_SECONDS = 15  # 2 minutes cooldown between email alerts
 
 # init_video_capture is now handled in detection_loop
 
@@ -69,7 +71,7 @@ def generate_frames():
 
 def detection_loop():
     """Main detection loop that runs in background"""
-    global frames, is_detecting, email_attempt_counter, current_alarm, current_suspicion, video_capture, latest_frame_buffer
+    global frames, is_detecting, email_attempt_counter, current_alarm, current_suspicion, video_capture, latest_frame_buffer, last_alert_time
     
     time_step = 1.0 / FPS
     
@@ -121,8 +123,13 @@ def detection_loop():
                             current_alarm = alarm
                             
                             if alarm:
-                                email_attempt_counter += 1
-                                print(f"Attempting to email! (Attempt #{email_attempt_counter})")
+                                now = time.time()
+                                cooldown_passed = (now - last_alert_time) >= COOLDOWN_SECONDS
+                                
+                                if cooldown_passed:
+                                    last_alert_time = now
+                                    email_attempt_counter += 1
+                                    print(f"Attempting to email! (Attempt #{email_attempt_counter})")
                         except Exception as e:
                             print(f"Error in motion detection: {e}")
             
