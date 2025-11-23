@@ -3,8 +3,8 @@ use std::io::{Read, Write};
 use std::fs::{self, File};
 
 fn main() {
-    let server = Server::http("0.0.0.0:8080").unwrap();
-    println!("Server running at http://127.0.0.1:8080");
+    let server = Server::http("0.0.0.0:8081").unwrap();
+    println!("Server running at http://127.0.0.1:8081");
 
     for request in server.incoming_requests() {
         println!("{:#?}", request.method());

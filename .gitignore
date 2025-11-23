@@ -115,3 +115,24 @@ dmypy.json
 
 # Local
 local/
+
+# Rust
+**/target/
+**/*.rs.bk
+**/Cargo.lock
+**/*.pdb
+**/*.rlib
+**/*.rmeta
+**/*.a
+**/*.so
+**/*.dylib
+**/*.dll
+**/*.exe
+**/*.d
+**/*.o
+**/*.rcgu.o
+**/.cargo-lock
+**/.rustc_info.json
+**/CACHEDIR.TAG
+**/.fingerprint/
+**/incremental/

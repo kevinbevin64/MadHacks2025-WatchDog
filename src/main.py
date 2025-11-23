@@ -5,14 +5,17 @@ from wakepy import keep
 from constants import NUM_FRAMES_ANALYZED, FPS
 # from email_module import send_email
 from analysis import should_notify
+from push_notifications import send_motion_alert
 
-COOLDOWN_SECONDS=15
+COOLDOWN_SECONDS = 15
+
 def backend_loop():
     with keep.presenting():
         time_step = 1.0 / FPS
         frames = []
         capture_device = cv2.VideoCapture(0)
         email_attempt_counter = 0
+        last_alert_time = 0  # Initialize last alert time
 
         while True:
             read_successfully, frame = capture_device.read()
@@ -39,7 +42,12 @@ def backend_loop():
 
                 if alarm and cooldown_passed:
                     last_alert_time = now  # update timer
-                    print("ALERT: sending email!")
+                    email_attempt_counter += 1
+                    print("ALERT: sending push notification!")
+                    
+                    # Send push notification
+                    send_motion_alert()
+                    
 
 if __name__ == "__main__":
     backend_loop()

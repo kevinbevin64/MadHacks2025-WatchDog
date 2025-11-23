@@ -3,4 +3,5 @@ numpy
 wakepy
 flask
 flask-cors
+apns2
 
