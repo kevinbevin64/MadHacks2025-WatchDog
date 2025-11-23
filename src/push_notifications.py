@@ -9,10 +9,8 @@ import requests
 import subprocess
 import json
 
-# Configuration - UPDATE THESE VALUES
-
-# APNs environment: 'sandbox' for development, 'production' for production
-APNS_ENVIRONMENT = "sandbox"  # Change to "production" for App Store builds
+# Import configuration from separate file (git-ignored)
+from apns_config import TEAM_ID, KEY_ID, BUNDLE_ID, P8_KEY_PATH, DEVICE_TOKEN, APNS_ENVIRONMENT
 
 def generate_jwt_token():
     """Generate JWT token for APNs authentication"""

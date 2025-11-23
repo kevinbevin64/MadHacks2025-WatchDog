@@ -86,6 +86,9 @@ logs/
 .env.*.local
 *.env
 
+# APNs configuration (contains private keys and tokens)
+src/apns_config.py
+
 # Temporary files
 *.tmp
 *.temp
