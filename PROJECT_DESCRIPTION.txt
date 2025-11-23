@@ -1,0 +1,28 @@
+## Inspiration
+
+Someone I know's apartment got broken into and we realized how useful it would have been to have a security system that could alert you immediately and record what happened. Most security systems are expensive or require professional installation, so we wanted to build something that anyone could set up with hardware they already own.
+
+## What it does
+
+WatchDog turns your laptop into a security camera. When it detects motion, you get an instant push notification on your phone, and it automatically records and saves the video. We built it with an Electron app for your laptop and an iOS app for your phone, so you can check what happened from anywhere. It uses stuff you already own—no expensive cameras or monthly fees. Perfect for dorms, apartments, or anywhere you want to know what's going on when you're not there.
+
+## How we built it
+
+We built two full-stack applications working together. The laptop side uses Python with OpenCV for motion detection, Flask for the backend server, and Electron for the desktop interface. The motion detection algorithm uses background subtraction to identify movement and tracks suspicion levels over time to reduce false positives. When motion is detected, the system records video and uploads it to a Rust server we built for file storage. The iOS app is built with SwiftUI and receives push notifications via Apple Push Notification Service (APNS). The whole system communicates over the internet, so it works from anywhere in the world—you can monitor your space even when you're traveling.
+
+## Challenges we ran into
+
+We hit some unexpected roadblocks along the way. We had to learn how HTTP servers work, especially handling file uploads and the request/response cycle. We decided to use Rust for the file server because we wanted something blazingly fast 🚀, but it was our first time working with Rust, so there was definitely a learning curve. Getting the Python client to reliably send video files to the server turned out to be trickier than expected—we ran into issues with file encoding and making sure everything uploaded correctly. iOS notifications were also more complicated than we anticipated. APNS setup required a lot of configuration, and we spent a good amount of time debugging why notifications weren't showing up. Probably the biggest challenge was just getting all the different pieces—Python server, Electron app, iOS app, Rust file server—to communicate reliably over the internet.
+
+## Accomplishments that we're proud of
+
+We're really proud that we built two complete full-stack applications from scratch—the Electron desktop app and the native iOS app—and got them working together seamlessly. The motion detection algorithm was a big challenge, and we're happy with how it balances sensitivity with reducing false alarms. We also figured out how to reliably send video files over the internet and stream them to the iOS app, which was trickier than we expected. Probably the coolest thing is that the whole system works from anywhere in the world—you can be on vacation and still get alerts and watch videos from your apartment. It's a fully functional security system that actually works in real-world conditions.
+
+## What we learned
+
+We learned a lot about computer vision and how motion detection actually works under the hood. OpenCV was new to most of us, so figuring out background subtraction and tuning the detection parameters was a learning curve. Building the push notification system taught us about APNS and how to handle device tokens and authentication. We also got better at working with video codecs and file formats—turns out getting videos to play reliably on iOS is harder than it sounds. Probably the biggest lesson was how to architect a system with multiple components (Python server, Electron app, iOS app, Rust file server) and make them all communicate reliably over the internet.
+
+## What's next for Sentry
+
+We have a bunch of ideas we want to try. Facial recognition is definitely something we want to add—it would be really cool if the system could learn who your roommates are and not wake you up at 3am when they come home, but still alert you for strangers. We're also thinking about supporting multiple cameras so you could monitor different rooms at once. A web dashboard would be nice too so you don't have to use the apps. We'd love to add cloud storage so videos get backed up automatically, and maybe scheduling so you can set it to only be active during certain times. If we had more time, integrating with smart home stuff would be pretty cool. Honestly, there's a lot we could do, but we want to keep it simple and free so anyone can use it.
+

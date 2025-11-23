@@ -27,13 +27,3 @@ def send_email(sender_email_address, target_email_address, gmail_app_password, s
         server.login(sender_email_address, gmail_app_password)
     
     print(f"Sent email to: {target_email_address}")
-    
-if __name__ == "__main__":
-    send_email(
-        sender_email_address="kevinbchen88@gmail.com",
-        target_email_address="kbchen3@wisc.edu",
-        gmail_app_password="dops mptt oqbr mjhy",
-        subject="Something",
-        body="Something else",
-        image_path="image.png"
-    )
