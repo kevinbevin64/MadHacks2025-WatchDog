@@ -40,7 +40,7 @@ def generate_frames():
             if frame_to_send is None:
                 # Send placeholder frame
                 error_frame = cv2.putText(
-                    cv2.zeros((480, 640, 3), dtype=np.uint8),
+                    np.zeros((480, 640, 3), dtype=np.uint8),
                     "Waiting for camera...",
                     (50, 240),
                     cv2.FONT_HERSHEY_SIMPLEX,
@@ -73,15 +73,22 @@ def detection_loop():
     
     time_step = 1.0 / FPS
     
-    # Initialize single video capture
+    # Initialize single video capture - try multiple camera indices
     if video_capture is None:
-        video_capture = cv2.VideoCapture(0)
-        if not video_capture.isOpened():
-            print("Error: Could not open video capture")
+        for camera_index in range(3):  # Try cameras 0, 1, 2
+            video_capture = cv2.VideoCapture(camera_index)
+            if video_capture.isOpened():
+                video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                print(f"Video capture initialized on camera index {camera_index}")
+                break
+            else:
+                video_capture.release()
+                video_capture = None
+        
+        if video_capture is None or not video_capture.isOpened():
+            print("Error: Could not open video capture. Please check your camera connection.")
             return
-        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        print("Video capture initialized")
     
     while True:
         try:
@@ -123,15 +130,23 @@ def detection_loop():
         except Exception as e:
             print(f"Error in detection loop: {e}")
             time.sleep(1)
-            # Try to reinitialize
+            # Try to reinitialize - try multiple camera indices
             try:
                 with video_capture_lock:
                     if video_capture is not None:
                         video_capture.release()
-                    video_capture = cv2.VideoCapture(0)
-                    if video_capture.isOpened():
-                        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    video_capture = None
+                    for camera_index in range(3):  # Try cameras 0, 1, 2
+                        video_capture = cv2.VideoCapture(camera_index)
+                        if video_capture.isOpened():
+                            video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                            video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                            print(f"Camera reinitialized on index {camera_index}")
+                            break
+                        else:
+                            if video_capture is not None:
+                                video_capture.release()
+                            video_capture = None
             except Exception as e2:
                 print(f"Error reinitializing capture: {e2}")
                 time.sleep(2)
