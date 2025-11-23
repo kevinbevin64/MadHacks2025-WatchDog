@@ -10,7 +10,8 @@ import os
 import sys
 from pathlib import Path
 
-RUST_SERVER_URL = "http://localhost:8081"
+# RUST_SERVER_URL = "http://localhost:8081"
+RUST_SERVER_URL = "https://unspread-unchivalrous-jacquelynn.ngrok-free.dev"
 
 # Upload a video
 def upload_video(file_path):

@@ -41,12 +41,14 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 latest_frame_buffer = None
 frame_buffer_lock = threading.Lock()
 
-def create_video_writer(filename, frame_width, frame_height):
+def create_video_writer(filename, frame_width, frame_height, fps=None):
     """Create a VideoWriter for saving recordings"""
     # Use MJPG codec for maximum compatibility and reliability
     fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+    # Use provided FPS or default to FPS constant
+    recording_fps = fps if fps is not None else FPS
     writer = cv2.VideoWriter(
-        filename, fourcc, FPS, (frame_width, frame_height)
+        filename, fourcc, recording_fps, (frame_width, frame_height)
     )
     if not writer.isOpened():
         print(f"Warning: Failed to open video writer for {filename}")
@@ -107,6 +109,7 @@ def detection_loop():
     frame_width = 640
     frame_height = 480
     was_detecting = False  # Track previous detection state
+    camera_fps = FPS  # Default to FPS constant, will be updated from camera
     
     # Initialize single video capture - try multiple camera indices
     if video_capture is None:
@@ -117,7 +120,30 @@ def detection_loop():
                 video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
                 frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
                 frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                print(f"Video capture initialized on camera index {camera_index}")
+                
+                # Get actual camera FPS
+                reported_fps = video_capture.get(cv2.CAP_PROP_FPS)
+                if reported_fps > 0:
+                    camera_fps = reported_fps
+                    print(f"Video capture initialized on camera index {camera_index}, FPS: {camera_fps}")
+                else:
+                    # If camera doesn't report FPS, measure it
+                    print(f"Camera doesn't report FPS, measuring...")
+                    start_time = time.time()
+                    frame_count = 0
+                    for _ in range(30):  # Sample 30 frames
+                        ret, _ = video_capture.read()
+                        if ret:
+                            frame_count += 1
+                    elapsed = time.time() - start_time
+                    if elapsed > 0 and frame_count > 0:
+                        camera_fps = frame_count / elapsed
+                        print(f"Measured camera FPS: {camera_fps:.2f}")
+                    else:
+                        # Default to 30 FPS if measurement fails
+                        camera_fps = 30.0
+                        print(f"Using default FPS: {camera_fps}")
+                
                 break
             else:
                 video_capture.release()
@@ -258,10 +284,10 @@ def detection_loop():
                                 if not recording:
                                     timestamp = time.strftime("%Y%m%d_%H%M%S")
                                     recording_filename = os.path.join(OUTPUT_DIR, f"motion_{timestamp}.avi")
-                                    print(f"--- Recording started: {recording_filename}")
+                                    print(f"--- Recording started: {recording_filename} at {camera_fps:.2f} FPS")
                                     
                                     recording_writer = create_video_writer(
-                                        recording_filename, frame_width, frame_height
+                                        recording_filename, frame_width, frame_height, fps=camera_fps
                                     )
                                     
                                     if recording_writer is None:

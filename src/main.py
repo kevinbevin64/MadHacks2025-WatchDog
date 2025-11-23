@@ -8,7 +8,6 @@ from constants import NUM_FRAMES_ANALYZED, FPS
 from analysis import should_notify
 from push_notifications import send_motion_alert
 
-<<<<<<< HEAD
 COOLDOWN_SECONDS = 15
 ROLLING_SECONDS = 5
 POST_MOTION_SECONDS = 15
@@ -22,9 +21,6 @@ def create_video_writer(filename, frame_width, frame_height):
     return cv2.VideoWriter(
         filename, fourcc, FPS, (frame_width, frame_height)
     )
-=======
-COOLDOWN_SECONDS = 1
->>>>>>> 6c497b347061723664b5130c41a0b8af82450b8c
 
 def backend_loop():
     print("dddddkdjfkdjfkdsjfkjsdf")
