@@ -30,7 +30,7 @@ COOLDOWN_SECONDS = 15  # Cooldown between alerts (in seconds)
 
 # Recording constants
 ROLLING_SECONDS = 5  # Keep 5 seconds of buffer before motion
-POST_MOTION_SECONDS = 15  # Continue recording 15 seconds after motion stops
+POST_MOTION_SECONDS = 5  # Continue recording 5 seconds after motion stops
 ROLLING_BUFFER_SIZE = int(ROLLING_SECONDS * FPS)
 OUTPUT_DIR = "recordings"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -176,6 +176,10 @@ def detection_loop():
                     video_to_upload = recording_filename
                     recording_filename = None
                     
+                    # Capture timestamp when video recording actually stops (video is captured)
+                    video_capture_time = time.time()
+                    video_capture_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(video_capture_time))
+                    
                     # Upload video and timestamp to Rust server (in background thread)
                     if video_to_upload and os.path.exists(video_to_upload):
                         def upload_after_delay():
@@ -194,11 +198,10 @@ def detection_loop():
                         upload_thread.start()
                         
                         try:
-                            # Create and upload timestamp JSON
-                            now = time.time()
+                            # Create and upload timestamp JSON with video capture time
                             timestamp_data = {
-                                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                                "unix_timestamp": now,
+                                "timestamp": video_capture_timestamp,
+                                "unix_timestamp": video_capture_time,
                                 "video_filename": os.path.basename(video_to_upload),
                                 "alarm": current_alarm,
                                 "suspicion": current_suspicion,
@@ -292,6 +295,10 @@ def detection_loop():
                                     print("--- Recording stopped.")
                                     recording = False
                                     
+                                    # Capture timestamp when video recording actually stops (video is captured)
+                                    video_capture_time = time.time()
+                                    video_capture_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(video_capture_time))
+                                    
                                     # Properly close the video writer
                                     if recording_writer is not None:
                                         try:
@@ -327,10 +334,10 @@ def detection_loop():
                                         
                                         try:
                                             
-                                            # Create and upload timestamp JSON
+                                            # Create and upload timestamp JSON with video capture time
                                             timestamp_data = {
-                                                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                                                "unix_timestamp": now,
+                                                "timestamp": video_capture_timestamp,
+                                                "unix_timestamp": video_capture_time,
                                                 "video_filename": os.path.basename(video_to_upload),
                                                 "alarm": current_alarm,
                                                 "suspicion": current_suspicion,

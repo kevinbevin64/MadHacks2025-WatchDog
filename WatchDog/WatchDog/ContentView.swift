@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var downloadError: String? = nil
     @State private var showPlayer = false
     @State private var tempVideoURL: URL? = nil
+    @State private var videoTimestamp: String? = nil
     
     // UserDefaults key for persistence
     private let disturbanceCountKey = "disturbanceCount"
@@ -108,6 +109,19 @@ struct ContentView: View {
                                 .foregroundColor(.blue)
                             Text("Video Recording")
                                 .font(.headline)
+                        }
+                        
+                        if let timestamp = videoTimestamp {
+                            VStack(spacing: 4) {
+                                Text("Captured at:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(timestamp)
+                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
+                                    .fontWeight(.medium)
+                            }
+                            .padding(.bottom, 4)
                         }
                         
                         Button(action: {
@@ -619,7 +633,7 @@ struct ContentView: View {
         return videoComposition
     }
     
-    // Fetch JSON from server and print the filename
+    // Fetch JSON from server and extract timestamp
     func fetchJSON() {
         guard let url = URL(string: "\(serverURL)/json") else {
             print("❌ Invalid JSON URL")
@@ -633,7 +647,7 @@ struct ContentView: View {
             request.setValue("true", forHTTPHeaderField: "ngrok-skip-browser-warning")
         }
         
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = URLSession.shared.dataTask(with: request) { [self] data, response, error in
             if let error = error {
                 print("❌ JSON fetch error: \(error.localizedDescription)")
                 return
@@ -652,13 +666,20 @@ struct ContentView: View {
                 return
             }
             
-            // Parse JSON and extract filename
+            // Parse JSON and extract timestamp
             do {
-                if let jsonObject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                   let filename = jsonObject["video_filename"] as? String {
-                    print("📁 Filename: \(filename)")
+                if let jsonObject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                    if let timestamp = jsonObject["timestamp"] as? String {
+                        DispatchQueue.main.async {
+                            self.videoTimestamp = timestamp
+                        }
+                        print("📅 Video timestamp: \(timestamp)")
+                    }
+                    if let filename = jsonObject["video_filename"] as? String {
+                        print("📁 Filename: \(filename)")
+                    }
                 } else {
-                    print("❌ Could not find 'video_filename' in JSON response")
+                    print("❌ Could not parse JSON response")
                     if let jsonString = String(data: data, encoding: .utf8) {
                         print("Raw response: \(jsonString)")
                     }
