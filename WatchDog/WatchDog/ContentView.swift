@@ -36,7 +36,7 @@ struct ContentView: View {
                             .foregroundColor(.blue)
                             .padding(.top, 20)
                         
-                        Text("WatchDog")
+                        Text("Sentry")
                             .font(.system(size: 32, weight: .bold))
                         
                         Text("Motion Detection System")
